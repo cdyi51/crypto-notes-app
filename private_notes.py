@@ -3,6 +3,7 @@ import os
 from hashlib import pbkdf2_hmac
 
 
+
 class PrivNotes:
   MAX_NOTE_LEN = 2048;
 
@@ -33,10 +34,11 @@ class PrivNotes:
       """initialize empty database with pw as password""" 
       # first create salt
       salt = os.urandom(16)
-      kdf = pbkdf2_hmac(algorithm = hashes.SHA256(), length = 32, salt = salt,
-      iterations = 2000000, backend = default_backend())
-      key = kdf.derive(bytes(password, ’ascii’))
-                             
+      # use salt to derive key with PBKDF2_HMAC
+      kdf = pbkdf2_hmac('sha256', password, salt, 2000000, 32)
+      key = kdf.derive(bytes(password, 'ascii'))
+      self.kvs = {'salt': salt, 'key': key} # ???? I have to go to OH for this
+                                           
 
   def dump(self):
     """Computes a serialized representation of the notes database
