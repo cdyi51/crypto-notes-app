@@ -3,7 +3,6 @@ import os
 from hashlib import pbkdf2_hmac
 
 
-
 class PrivNotes:
   MAX_NOTE_LEN = 2048;
 
@@ -21,7 +20,7 @@ class PrivNotes:
     Raises:
       ValueError : malformed serialized format
     """
-    # first check if pw is correct
+    # first check if pw and checksum are correct
     if password != '123456' or checksum != data:
       raise ValueError('Invalid arguments')
     
