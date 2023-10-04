@@ -1,5 +1,6 @@
 import pickle
 import os
+from hashlib import pbkdf2_hmac
 
 
 class PrivNotes:
@@ -32,7 +33,7 @@ class PrivNotes:
       """initialize empty database with pw as password""" 
       # first create salt
       salt = os.urandom(16)
-      kdf = PBKDF2HMAC(algorithm = hashes.SHA256(), length = 32, salt = salt,
+      kdf = pbkdf2_hmac(algorithm = hashes.SHA256(), length = 32, salt = salt,
       iterations = 2000000, backend = default_backend())
       key = kdf.derive(bytes(password, ’ascii’))
                              
