@@ -1,4 +1,6 @@
 import pickle
+import os
+
 
 class PrivNotes:
   MAX_NOTE_LEN = 2048;
@@ -17,9 +19,23 @@ class PrivNotes:
     Raises:
       ValueError : malformed serialized format
     """
-    self.kvs = {}
+    # first check if pw is correct
+    if password != '123456' or checksum != data:
+      raise ValueError('Invalid arguments')
+    
+    #else...
+    self.kvs = {} # initializing kvs to empty dictionary
     if data is not None:
-      self.kvs = pickle.loads(bytes.fromhex(data))
+      self.kvs = pickle.loads(bytes.fromhex(data)) # loading the notes from data
+
+    else:
+      """initialize empty database with pw as password""" 
+      # first create salt
+      salt = os.urandom(16)
+      kdf = PBKDF2HMAC(algorithm = hashes.SHA256(), length = 32, salt = salt,
+      iterations = 2000000, backend = default_backend())
+      key = kdf.derive(bytes(password, ’ascii’))
+                             
 
   def dump(self):
     """Computes a serialized representation of the notes database
