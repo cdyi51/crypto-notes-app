@@ -1,9 +1,10 @@
 import pickle
 import os
-from hashlib import sha256, pbkdf2_hmac
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
-_queries = {}
-_b = 0 | 1 # idk how to choose one of these without blatantly revealing it in the code
+encrypted_kvs = {}
 
 class PrivNotes:
   MAX_NOTE_LEN = 2048;
@@ -24,8 +25,6 @@ class PrivNotes:
       ValueError : malformed serialized format
     """
     # first check if pw and checksum are correct
-    if password != '123456' or checksum != data:
-      raise ValueError('Invalid arguments')
         
     #else...
     self.kvs = {} # initializing kvs to empty dictionary
@@ -37,9 +36,22 @@ class PrivNotes:
       # first create salt
       salt = os.urandom(16)
       # use salt to derive key with PBKDF2_HMAC
-      kdf = pbkdf2_hmac('sha256', password, salt, 2000000, 32)
+      kdf = PBKDF2HMAC(algorithm = hashes.SHA256(), length = 32, salt = salt, 
+                       iterations = 2000000) # add backend but idk what that really is
       key = kdf.derive(bytes(password, 'ascii'))
-      self.kvs = {'salt': salt, 'key': key} # ???? I have to go to OH for this
+      
+      nonce = os.urandom(12)
+      # encrypt the notes
+      for key in self.kvs:
+        unencrypted_note = self.kvs[key]
+        aesgcm = AESGCM(unencrypted_note)
+        encrypted_note = aesgcm.encrypt(nonce, unencrypted_note, None)
+        encrypted_kvs[key] = encrypted_note
+        nonce += 1
+      # ct = aesgcm.encrypt(nonce, data, aad)
+      # aesgcm.decrypt(nonce, ct, aad)
+      
+
                                            
 
   def dump(self):
@@ -53,7 +65,7 @@ class PrivNotes:
                        against rollback attacks (up to 32 characters in length)
     """
     # return hexified data and checksum
-    return pickle.dumps(self.kvs).hex(), sha256(self.kvs).hex()
+    return pickle.dumps(self.kvs).hex(), hashes.SHA256(self.kvs).hex()
 
   def get(self, title):
     """Fetches the note associated with a title.
@@ -65,16 +77,8 @@ class PrivNotes:
       note (str) : the note associated with the requested title if
                        it exists and otherwise None
     """
-    global _queries
     if title in self.kvs:
-      if title in _queries:
-        """Check if the values (notes) of this title are distinct. if so, retrieve m0 or m1 as appropriate.
-        If they are the same, this is the adversary trying to trick us!! 
-        Raise an error I guess"""
-        return self.kvs[title]
-      else:
-        raise Exception 
-    
+      return self.kvs[title]
     return None
 
   def set(self, title, note):
@@ -99,7 +103,6 @@ class PrivNotes:
       raise ValueError('Maximum note length exceeded')
     
     self.kvs[title] = note
-    _queries[title] = note
 
 
   def remove(self, title):
