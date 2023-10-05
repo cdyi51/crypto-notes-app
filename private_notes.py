@@ -33,10 +33,8 @@ class PrivNotes:
 
     else:
       """initialize empty database with pw as password""" 
-      # first create salt
-      salt = os.urandom(16)
       # use salt to derive key with PBKDF2_HMAC
-      kdf = PBKDF2HMAC(algorithm = hashes.SHA256(), length = 32, salt = salt, 
+      kdf = PBKDF2HMAC(algorithm = hashes.SHA256(), length = 32, salt = os.urandom(16), 
                        iterations = 2000000) # add backend but idk what that really is
       key = kdf.derive(bytes(password, 'ascii'))
       
@@ -45,6 +43,7 @@ class PrivNotes:
       for key in self.kvs:
         unencrypted_note = self.kvs[key]
         aesgcm = AESGCM(unencrypted_note)
+        # ig this is where I'd add the padding?
         encrypted_note = aesgcm.encrypt(nonce, unencrypted_note, None)
         encrypted_kvs[key] = encrypted_note
         nonce += 1
