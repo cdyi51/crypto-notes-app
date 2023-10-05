@@ -1,10 +1,13 @@
 import pickle
 import os
-from hashlib import pbkdf2_hmac
+from hashlib import sha256, pbkdf2_hmac
 
+_queries = {}
+_b = 0 | 1 # idk how to choose one of these without blatantly revealing it in the code
 
 class PrivNotes:
   MAX_NOTE_LEN = 2048;
+ 
 
   def __init__(self, password, data = None, checksum = None):
     """Constructor.
@@ -23,7 +26,7 @@ class PrivNotes:
     # first check if pw and checksum are correct
     if password != '123456' or checksum != data:
       raise ValueError('Invalid arguments')
-    
+        
     #else...
     self.kvs = {} # initializing kvs to empty dictionary
     if data is not None:
@@ -49,7 +52,8 @@ class PrivNotes:
       checksum (str) : a hex-encoded checksum for the data used to protect
                        against rollback attacks (up to 32 characters in length)
     """
-    return pickle.dumps(self.kvs).hex(), ''
+    # return hexified data and checksum
+    return pickle.dumps(self.kvs).hex(), sha256(self.kvs).hex()
 
   def get(self, title):
     """Fetches the note associated with a title.
@@ -61,8 +65,16 @@ class PrivNotes:
       note (str) : the note associated with the requested title if
                        it exists and otherwise None
     """
+    global _queries
     if title in self.kvs:
-      return self.kvs[title]
+      if title in _queries:
+        """Check if the values (notes) of this title are distinct. if so, retrieve m0 or m1 as appropriate.
+        If they are the same, this is the adversary trying to trick us!! 
+        Raise an error I guess"""
+        return self.kvs[title]
+      else:
+        raise Exception 
+    
     return None
 
   def set(self, title, note):
@@ -80,10 +92,14 @@ class PrivNotes:
        Raises:
          ValueError : if note length exceeds the maximum
     """
+    # have to account for if adversary queries more than one note. if so, we have to set a b so that 
+    # the challenger (us) knows which one to actually encrypt/insert
+    
     if len(note) > self.MAX_NOTE_LEN:
       raise ValueError('Maximum note length exceeded')
     
     self.kvs[title] = note
+    _queries[title] = note
 
 
   def remove(self, title):
