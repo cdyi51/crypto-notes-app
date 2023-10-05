@@ -27,7 +27,9 @@ class PrivNotes:
     # first check if pw and checksum are correct
         
     #else...
+    
     self.kvs = {} # initializing kvs to empty dictionary
+    
     if data is not None:
       self.kvs = pickle.loads(bytes.fromhex(data)) # loading the notes from data
 
@@ -38,15 +40,7 @@ class PrivNotes:
                        iterations = 2000000) # add backend but idk what that really is
       key = kdf.derive(bytes(password, 'ascii'))
       
-      nonce = os.urandom(12)
-      # encrypt the notes
-      for key in self.kvs:
-        unencrypted_note = self.kvs[key]
-        aesgcm = AESGCM(unencrypted_note)
-        # ig this is where I'd add the padding?
-        encrypted_note = aesgcm.encrypt(nonce, unencrypted_note, None)
-        encrypted_kvs[key] = encrypted_note
-        nonce += 1
+     
       # ct = aesgcm.encrypt(nonce, data, aad)
       # aesgcm.decrypt(nonce, ct, aad)
       
@@ -98,10 +92,19 @@ class PrivNotes:
     # have to account for if adversary queries more than one note. if so, we have to set a b so that 
     # the challenger (us) knows which one to actually encrypt/insert
     
+    
     if len(note) > self.MAX_NOTE_LEN:
       raise ValueError('Maximum note length exceeded')
-    
-    self.kvs[title] = note
+    nonce = os.urandom(12)
+      # encrypt the notes
+    for key in self.kvs:
+      unencrypted_note = self.kvs[key]
+      aesgcm = AESGCM(unencrypted_note)
+      # ig this is where I'd add the padding?
+      encrypted_note = aesgcm.encrypt(nonce, unencrypted_note, None)
+      encrypted_kvs[key] = encrypted_note
+      nonce += 1
+    # self.kvs[title] = note
 
 
   def remove(self, title):
