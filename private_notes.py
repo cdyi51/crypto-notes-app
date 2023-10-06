@@ -1,3 +1,5 @@
+# Authors: Christina Yi and Annie Pi
+
 import pickle
 import os
 from cryptography.hazmat.primitives import hashes, padding, hmac
